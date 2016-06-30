@@ -572,7 +572,7 @@ class Validator
 				$this->data->$key = unserialize(serialize($schema->default));
 				return TRUE;
 			}
-			if (isset($schema->type) && $this->option(self::OPTION_NO_IMPLICIT_DEFAULT)) {
+			if (isset($schema->type) && !$this->option(self::OPTION_NO_IMPLICIT_DEFAULT)) {
 				$types = is_array($schema->type) ? $schema->type : array($schema->type);
 				if (in_array("null", $types)) {
 					$this->data->$key = NULL;
