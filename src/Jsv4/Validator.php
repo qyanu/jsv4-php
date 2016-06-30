@@ -34,6 +34,13 @@ class Validator
 	const ARRAY_UNIQUE				 = 402;
 	const ARRAY_ADDITIONAL_ITEMS		 = 403;
 
+	/* options */
+	/**
+	 * boolean option. if true, then a missing default of an object property
+	 * will render the coercive validator unable to assign a default value.
+	 */
+	const OPTION_NO_IMPLICIT_DEFAULT = "no_implicit_default";
+
 	private $data;
 	private $schema;
 	private $firstErrorOnly;
@@ -41,7 +48,11 @@ class Validator
 	public $valid;
 	public $errors;
 
-	private function __construct(&$data, $schema, $firstErrorOnly = FALSE, $coerce = FALSE)
+	/**
+	 * @param $options additional validator options
+	 */
+	private function __construct(&$data, $schema, $firstErrorOnly = FALSE,
+		$coerce = FALSE, array $options = array())
 	{
 		$this->data				 = & $data;
 		$this->schema			 = & $schema;
@@ -49,6 +60,7 @@ class Validator
 		$this->coerce			 = $coerce;
 		$this->valid			 = TRUE;
 		$this->errors			 = array();
+		$this->options           = $options;
 
 		try {
 			$this->checkTypes();
@@ -64,20 +76,20 @@ class Validator
 	}
 
 
-	static public function validate($data, $schema)
+	static public function validate($data, $schema, array $options = array())
 	{
 		return new Validator($data, $schema);
 	}
 
 
-	static public function isValid($data, $schema)
+	static public function isValid($data, $schema, array $options = array())
 	{
 		$result = new Validator($data, $schema, TRUE);
 		return $result->valid;
 	}
 
 
-	static public function coerce($data, $schema)
+	static public function coerce($data, $schema, array $options = array())
 	{
 		if (is_object($data) || is_array($data)) {
 			$data = unserialize(serialize($data));
@@ -171,6 +183,22 @@ class Validator
 				$this->errors[] = $error->prefix($dataPrefix, $schemaPrefix);
 			}
 		}
+	}
+
+
+	/**
+	 * looks into the user-supplied $this->options and returns
+	 * the value for given option
+	 */
+	private function option($optionKey) {
+		switch($optionKey) {
+			case self::OPTION_NO_IMPLICIT_DEFAULT: // bool
+				if(!array_key_exists($optionKey, $this->options))
+					return false;
+				return (bool)$this->options[$optionKey];
+			break;
+		}
+		throw new Exception("missing case in switch statement or unknown option");
 	}
 
 
@@ -544,7 +572,7 @@ class Validator
 				$this->data->$key = unserialize(serialize($schema->default));
 				return TRUE;
 			}
-			if (isset($schema->type)) {
+			if (isset($schema->type) && $this->option(self::OPTION_NO_IMPLICIT_DEFAULT)) {
 				$types = is_array($schema->type) ? $schema->type : array($schema->type);
 				if (in_array("null", $types)) {
 					$this->data->$key = NULL;
