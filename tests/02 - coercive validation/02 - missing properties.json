@@ -91,6 +91,31 @@
 			}
 		}
 	},
+    {
+        "method": "coerce",
+        "title": "must not insert missing properties if no default and option 'no implicit defaults' enabled",
+        "schema": {
+            "type": "object",
+            "properties": {
+                "perp": {
+                    "type": "object",
+                    "properties": {
+                        "parp": {}
+                    }
+                }
+            },
+            "required": ["perp"]
+        },
+        "options": {
+            "no_implicit_default": true
+        },
+        "data": {
+
+        },
+        "result": {
+            "/valid": false
+        }
+    },
 	{
 		"method": "coerce",
 		"title": "Insert missing properties - recurse into sub-objects",

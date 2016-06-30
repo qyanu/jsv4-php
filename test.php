@@ -20,12 +20,19 @@ function runJsonTest($key, $test)
 	$totalTestCount++;
 
 	try {
+        if(isset($test->options)) {
+            $options = (array)$test->options;
+        }
+        else {
+            $options = array();
+        }
+
 		if ($test->method == "validate") {
-			$result = Validator::validate($test->data, $test->schema);
+			$result = Validator::validate($test->data, $test->schema, $options);
 		} else if ($test->method == "isValid") {
-			$result = Validator::isValid($test->data, $test->schema);
+			$result = Validator::isValid($test->data, $test->schema, $options);
 		} else if ($test->method == "coerce") {
-			$result = Validator::coerce($test->data, $test->schema);
+			$result = Validator::coerce($test->data, $test->schema, $options);
 		} else {
 			$failedTests[$key][] = ("Unknown method: {$test->method}");
 			return;

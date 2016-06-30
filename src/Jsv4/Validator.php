@@ -45,6 +45,7 @@ class Validator
 	private $schema;
 	private $firstErrorOnly;
 	private $coerce;
+	private $options;
 	public $valid;
 	public $errors;
 
@@ -78,13 +79,13 @@ class Validator
 
 	static public function validate($data, $schema, array $options = array())
 	{
-		return new Validator($data, $schema);
+		return new Validator($data, $schema, false, false, $options);
 	}
 
 
 	static public function isValid($data, $schema, array $options = array())
 	{
-		$result = new Validator($data, $schema, TRUE);
+		$result = new Validator($data, $schema, TRUE, false, $options);
 		return $result->valid;
 	}
 
@@ -94,7 +95,7 @@ class Validator
 		if (is_object($data) || is_array($data)) {
 			$data = unserialize(serialize($data));
 		}
-		$result = new Validator($data, $schema, FALSE, TRUE);
+		$result = new Validator($data, $schema, FALSE, TRUE, $options);
 		if ($result->valid) {
 			$result->value = $result->data;
 		}
@@ -171,7 +172,7 @@ class Validator
 
 	private function subResult(&$data, $schema, $allowCoercion = TRUE)
 	{
-		return new Validator($data, $schema, $this->firstErrorOnly, $allowCoercion && $this->coerce);
+		return new Validator($data, $schema, $this->firstErrorOnly, $allowCoercion && $this->coerce, $this->options);
 	}
 
 
@@ -572,7 +573,10 @@ class Validator
 				$this->data->$key = unserialize(serialize($schema->default));
 				return TRUE;
 			}
-			if (isset($schema->type) && !$this->option(self::OPTION_NO_IMPLICIT_DEFAULT)) {
+			if($this->option(self::OPTION_NO_IMPLICIT_DEFAULT)) {
+				return FALSE;
+			}
+			if (isset($schema->type)) {
 				$types = is_array($schema->type) ? $schema->type : array($schema->type);
 				if (in_array("null", $types)) {
 					$this->data->$key = NULL;
