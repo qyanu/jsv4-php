@@ -268,7 +268,13 @@ class Validator
 							$this->data = FALSE;
 							return;
 						}
-					}
+					} else if ($type == "array") {
+                        // cast empty string to empty array
+                        if (is_string($this->data) and empty($this->data)) {
+                            $this->data = array();
+                            return;
+                        }
+                    }
 				}
 			}
 
