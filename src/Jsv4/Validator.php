@@ -298,6 +298,9 @@ class Validator
 	private function checkEnum()
 	{
 		if (isset($this->schema->enum)) {
+            if(!is_array($this->schema->enum)) {
+                throw new Exception("enum must be of type array");
+            }
 			foreach ($this->schema->enum as $option) {
 				if (self::recursiveEqual($this->data, $option)) {
 					return;
