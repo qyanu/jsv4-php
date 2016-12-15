@@ -268,6 +268,12 @@ class Validator
 							$this->data = FALSE;
 							return;
 						}
+                    } else if ($type == "object") {
+                        // cast empty string to empty object
+                        if (is_string($this->data) and empty($this->data)) {
+                            $this->data = (object)array();
+                            return;
+                        }
 					} else if ($type == "array") {
                         // cast empty string to empty array
                         if (is_string($this->data) and empty($this->data)) {
