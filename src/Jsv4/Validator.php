@@ -176,7 +176,7 @@ class Validator
 	}
 
 
-	private function includeSubResult($subResult, $dataPrefix, $schemaPrefix)
+	private function includeSubResult(self $subResult, $dataPrefix, $schemaPrefix)
 	{
 		if (!$subResult->valid) {
 			$this->valid = FALSE;
@@ -508,16 +508,33 @@ class Validator
 	private function checkComposite()
 	{
 		if (isset($this->schema->allOf)) {
+            // Note: it is left as an exercise for the programmer using this
+            // Validator to ensure, that all subResults coerce to the same
+            // type. Therefore the concernes regarding anyOf mentioned blow
+            // don't apply.
 			foreach ($this->schema->allOf as $index => $subSchema) {
 				$subResult = $this->subResult($this->data, $subSchema, FALSE);
 				$this->includeSubResult($subResult, "", "/allOf/" . (int) $index);
 			}
 		}
 		if (isset($this->schema->anyOf)) {
+            // Note: If $coerce==true, then a preceding subResult may have
+            // modified its $data, but still fail (e.g. succeed and modify in
+            // an early check() but fail in a later check()). In this case a
+            // subsequent subResult would operate on a modified $data.
+            // Therefore $data needs to be cloned in this case; the succeeding
+            // subResult's $data then needs to be used for $this->data, to
+            // be eventually used as part of the root validators $value.
 			$failResults = array();
 			foreach ($this->schema->anyOf as $index => $subSchema) {
-				$subResult = $this->subResult($this->data, $subSchema, FALSE);
+                unset($data);
+                if($this->coerce)
+                    $data = $this->data;
+                else
+                    $data = & $this->data;
+				$subResult = $this->subResult($data, $subSchema, FALSE);
 				if ($subResult->valid) {
+                    $this->data = & $data;
 					return;
 				}
 				$failResults[] = $subResult;
@@ -525,11 +542,18 @@ class Validator
 			$this->fail(self::ANY_OF_MISSING, "", "/anyOf", "Value must satisfy at least one of the options", $failResults);
 		}
 		if (isset($this->schema->oneOf)) {
+            // Note: the same concernes as mentioned regardin anyOf above apply.
 			$failResults	 = array();
 			$successIndex	 = NULL;
 			foreach ($this->schema->oneOf as $index => $subSchema) {
-				$subResult = $this->subResult($this->data, $subSchema, FALSE);
+                unset($data);
+                if($this->coerce)
+                    $data = $this->data;
+                else
+                    $data = & $this->data;
+				$subResult = $this->subResult($data, $subSchema, FALSE);
 				if ($subResult->valid) {
+                    $this->data = & $data;
 					if ($successIndex === NULL) {
 						$successIndex = $index;
 					} else {
