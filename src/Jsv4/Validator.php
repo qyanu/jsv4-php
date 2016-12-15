@@ -33,6 +33,7 @@ class Validator
 	const ARRAY_LENGTH_LONG			 = 401;
 	const ARRAY_UNIQUE				 = 402;
 	const ARRAY_ADDITIONAL_ITEMS		 = 403;
+    const ARRAY_INDEX_TYPE             = 403;
 
 	/* options */
 	/**
@@ -48,6 +49,7 @@ class Validator
 	private $options;
 	public $valid;
 	public $errors;
+    public $schemaException = null;
 
 	/**
 	 * @param $options additional validator options
@@ -73,19 +75,26 @@ class Validator
 			$this->checkComposite();
 		} catch (ValidationException $e) {
 
-		}
+		} catch (SchemaException $e) {
+            $this->schemaException = $e;
+        }
 	}
 
 
 	static public function validate($data, $schema, array $options = array())
 	{
-		return new Validator($data, $schema, false, false, $options);
+		$result = new Validator($data, $schema, false, false, $options);
+        if(null!==$result->schemaException)
+            throw $result->schemaException;
+        return $result;
 	}
 
 
 	static public function isValid($data, $schema, array $options = array())
 	{
 		$result = new Validator($data, $schema, TRUE, false, $options);
+        if(null!==$result->schemaException)
+            throw $result->schemaException;
 		return $result->valid;
 	}
 
@@ -96,6 +105,8 @@ class Validator
 			$data = unserialize(serialize($data));
 		}
 		$result = new Validator($data, $schema, FALSE, TRUE, $options);
+        if(null!==$result->schemaException)
+            throw $result->schemaException;
 		if ($result->valid) {
 			$result->value = $result->data;
 		}
@@ -184,6 +195,11 @@ class Validator
 				$this->errors[] = $error->prefix($dataPrefix, $schemaPrefix);
 			}
 		}
+        if (null!==$subResult->schemaException) {
+            $this->schemaException = $subResult->schemaException
+                ->prefix($dataPrefix, $schemaException);
+            throw new $this->schemaException;
+        }
 	}
 
 
@@ -299,7 +315,7 @@ class Validator
 	{
 		if (isset($this->schema->enum)) {
             if(!is_array($this->schema->enum)) {
-                throw new Exception("enum must be of type array");
+                throw new SchemaException("/enum", "enum must be of type array");
             }
 			foreach ($this->schema->enum as $option) {
 				if (self::recursiveEqual($this->data, $option)) {
@@ -407,7 +423,9 @@ class Validator
 			if (is_array($items)) {
 				foreach ($this->data as $index => &$subData) {
 					if (!is_numeric($index)) {
-						throw new Exception("Arrays must only be numerically-indexed");
+                        $this->fail(self::ARRAY_INDEX_TYPE, "/{$index}",
+                            "/items/{$index}", "Data-Arrays must only be "
+                            ."numerically-indexed");
 					}
 					if (isset($items[$index])) {
 						$subResult = $this->subResult($subData, $items[$index]);
@@ -425,7 +443,9 @@ class Validator
 			} else {
 				foreach ($this->data as $index => &$subData) {
 					if (!is_numeric($index)) {
-						throw new Exception("Arrays must only be numerically-indexed");
+                        $this->fail(self::ARRAY_INDEX_TYPE, "/{$index}",
+                            "/items", "Data-Arrays must only be "
+                            ."numerically-indexed");
 					}
 					$subResult = $this->subResult($subData, $items);
 					$this->includeSubResult($subResult, "/{$index}", "/items");
