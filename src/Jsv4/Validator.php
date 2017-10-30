@@ -41,6 +41,21 @@ class Validator
 	 * will render the coercive validator unable to assign a default value.
 	 */
 	const OPTION_NO_IMPLICIT_DEFAULT = "no_implicit_default";
+	/**
+	 * boolean option. if true, then the non-standard "ignoreNullProperties"
+	 * validation keyword is also recognized.
+	 *
+	 * validation keyword `ignoreNullProperties`
+	 *
+	 * The value of this keyword MUST be a boolean.
+	 * If it has boolean value true and the instance is of type object,
+	 * all properties of the object instance which have a value of `null`
+	 * are treated as if not present in the json prior to evaluating any other
+	 * validation keyword.
+	 *
+	 * Omitting this keyword has the same behavior as a value of false.
+	 */
+	const OPTION_ENABLE_IGNORE_NULL_PROPERTIES = "enable_ignore_null_properties";
 
 	private $data;
 	private $schema;
@@ -214,6 +229,12 @@ class Validator
 					return false;
 				return (bool)$this->options[$optionKey];
 			break;
+
+			case self::OPTION_ENABLE_IGNORE_NULL_PROPERTIES: // bool
+				if(!array_key_exists($optionKey, $this->options))
+					return false;
+				return (bool)$this->options[$optionKey];
+			break;
 		}
 		throw new Exception("missing case in switch statement or unknown option");
 	}
@@ -339,6 +360,17 @@ class Validator
 						continue;
 					}
 					$this->fail(self::OBJECT_REQUIRED, "", "/required/{$index}", "Missing required property: {$key}");
+				}
+			}
+		}
+		if($this->option(self::OPTION_ENABLE_IGNORE_NULL_PROPERTIES)) {
+			if(isset($this->schema->ignoreNullProperties)
+			&& $this->schema->ignoreNullProperties) {
+				// remove `null` properties
+				foreach($this->data as $key => $subValue) {
+					if(null===$subValue) {
+						unset($this->data->$key);
+					}
 				}
 			}
 		}
