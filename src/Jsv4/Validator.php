@@ -2,6 +2,8 @@
 
 namespace Jsv4;
 
+use Exception;
+
 
 class Validator
 {
@@ -33,7 +35,7 @@ class Validator
 	const ARRAY_LENGTH_LONG			 = 401;
 	const ARRAY_UNIQUE				 = 402;
 	const ARRAY_ADDITIONAL_ITEMS		 = 403;
-    const ARRAY_INDEX_TYPE             = 403;
+	const ARRAY_INDEX_TYPE             = 404;
 
 	/* options */
 	/**
@@ -64,7 +66,7 @@ class Validator
 	private $options;
 	public $valid;
 	public $errors;
-    public $schemaException = null;
+	public $schemaException = null;
 
 	/**
 	 * @param $options additional validator options
@@ -91,25 +93,25 @@ class Validator
 		} catch (ValidationException $e) {
 
 		} catch (SchemaException $e) {
-            $this->schemaException = $e;
-        }
+			$this->schemaException = $e;
+		}
 	}
 
 
 	static public function validate($data, $schema, array $options = array())
 	{
 		$result = new Validator($data, $schema, false, false, $options);
-        if(null!==$result->schemaException)
-            throw $result->schemaException;
-        return $result;
+		if(null!==$result->schemaException)
+			throw $result->schemaException;
+		return $result;
 	}
 
 
 	static public function isValid($data, $schema, array $options = array())
 	{
 		$result = new Validator($data, $schema, TRUE, false, $options);
-        if(null!==$result->schemaException)
-            throw $result->schemaException;
+		if(null!==$result->schemaException)
+			throw $result->schemaException;
 		return $result->valid;
 	}
 
@@ -120,8 +122,8 @@ class Validator
 			$data = unserialize(serialize($data));
 		}
 		$result = new Validator($data, $schema, FALSE, TRUE, $options);
-        if(null!==$result->schemaException)
-            throw $result->schemaException;
+		if(null!==$result->schemaException)
+			throw $result->schemaException;
 		if ($result->valid) {
 			$result->value = $result->data;
 		}
@@ -210,11 +212,11 @@ class Validator
 				$this->errors[] = $error->prefix($dataPrefix, $schemaPrefix);
 			}
 		}
-        if (null!==$subResult->schemaException) {
-            $this->schemaException = $subResult->schemaException
-                ->prefix($dataPrefix, $schemaException);
-            throw new $this->schemaException;
-        }
+		if (null!==$subResult->schemaException) {
+			$this->schemaException = $subResult->schemaException
+				->prefix($dataPrefix, $schemaException);
+			throw new $this->schemaException;
+		}
 	}
 
 
@@ -305,19 +307,19 @@ class Validator
 							$this->data = FALSE;
 							return;
 						}
-                    } else if ($type == "object") {
-                        // cast empty string to empty object
-                        if (is_string($this->data) and empty($this->data)) {
-                            $this->data = (object)array();
-                            return;
-                        }
+					} else if ($type == "object") {
+						// cast empty string to empty object
+						if (is_string($this->data) and empty($this->data)) {
+							$this->data = (object)array();
+							return;
+						}
 					} else if ($type == "array") {
-                        // cast empty string to empty array
-                        if (is_string($this->data) and empty($this->data)) {
-                            $this->data = array();
-                            return;
-                        }
-                    }
+						// cast empty string to empty array
+						if (is_string($this->data) and empty($this->data)) {
+							$this->data = array();
+							return;
+						}
+					}
 				}
 			}
 
@@ -335,9 +337,9 @@ class Validator
 	private function checkEnum()
 	{
 		if (isset($this->schema->enum)) {
-            if(!is_array($this->schema->enum)) {
-                throw new SchemaException("/enum", "enum must be of type array");
-            }
+			if(!is_array($this->schema->enum)) {
+				throw new SchemaException("/enum", "enum must be of type array");
+			}
 			foreach ($this->schema->enum as $option) {
 				if (self::recursiveEqual($this->data, $option)) {
 					return;
@@ -455,9 +457,9 @@ class Validator
 			if (is_array($items)) {
 				foreach ($this->data as $index => &$subData) {
 					if (!is_numeric($index)) {
-                        $this->fail(self::ARRAY_INDEX_TYPE, "/{$index}",
-                            "/items/{$index}", "Data-Arrays must only be "
-                            ."numerically-indexed");
+						$this->fail(self::ARRAY_INDEX_TYPE, "/{$index}",
+							"/items/{$index}", "Data-Arrays must only be "
+							."numerically-indexed");
 					}
 					if (isset($items[$index])) {
 						$subResult = $this->subResult($subData, $items[$index]);
@@ -475,9 +477,9 @@ class Validator
 			} else {
 				foreach ($this->data as $index => &$subData) {
 					if (!is_numeric($index)) {
-                        $this->fail(self::ARRAY_INDEX_TYPE, "/{$index}",
-                            "/items", "Data-Arrays must only be "
-                            ."numerically-indexed");
+						$this->fail(self::ARRAY_INDEX_TYPE, "/{$index}",
+							"/items", "Data-Arrays must only be "
+							."numerically-indexed");
 					}
 					$subResult = $this->subResult($subData, $items);
 					$this->includeSubResult($subResult, "/{$index}", "/items");
@@ -575,33 +577,33 @@ class Validator
 	private function checkComposite()
 	{
 		if (isset($this->schema->allOf)) {
-            // Note: it is left as an exercise for the programmer using this
-            // Validator to ensure, that all subResults coerce to the same
-            // type. Therefore the concernes regarding anyOf mentioned blow
-            // don't apply.
+			// Note: it is left as an exercise for the programmer using this
+			// Validator to ensure, that all subResults coerce to the same
+			// type. Therefore the concernes regarding anyOf mentioned blow
+			// don't apply.
 			foreach ($this->schema->allOf as $index => $subSchema) {
 				$subResult = $this->subResult($this->data, $subSchema, FALSE);
 				$this->includeSubResult($subResult, "", "/allOf/" . (int) $index);
 			}
 		}
 		if (isset($this->schema->anyOf)) {
-            // Note: If $coerce==true, then a preceding subResult may have
-            // modified its $data, but still fail (e.g. succeed and modify in
-            // an early check() but fail in a later check()). In this case a
-            // subsequent subResult would operate on a modified $data.
-            // Therefore $data needs to be cloned in this case; the succeeding
-            // subResult's $data then needs to be used for $this->data, to
-            // be eventually used as part of the root validators $value.
+			// Note: If $coerce==true, then a preceding subResult may have
+			// modified its $data, but still fail (e.g. succeed and modify in
+			// an early check() but fail in a later check()). In this case a
+			// subsequent subResult would operate on a modified $data.
+			// Therefore $data needs to be cloned in this case; the succeeding
+			// subResult's $data then needs to be used for $this->data, to
+			// be eventually used as part of the root validators $value.
 			$failResults = array();
 			foreach ($this->schema->anyOf as $index => $subSchema) {
-                unset($data);
-                if($this->coerce)
-                    $data = $this->data;
-                else
-                    $data = & $this->data;
+				unset($data);
+				if($this->coerce)
+					$data = $this->data;
+				else
+					$data = & $this->data;
 				$subResult = $this->subResult($data, $subSchema, FALSE);
 				if ($subResult->valid) {
-                    $this->data = & $data;
+					$this->data = & $data;
 					return;
 				}
 				$failResults[] = $subResult;
@@ -609,18 +611,18 @@ class Validator
 			$this->fail(self::ANY_OF_MISSING, "", "/anyOf", "Value must satisfy at least one of the options", $failResults);
 		}
 		if (isset($this->schema->oneOf)) {
-            // Note: the same concernes as mentioned regardin anyOf above apply.
+			// Note: the same concernes as mentioned regardin anyOf above apply.
 			$failResults	 = array();
 			$successIndex	 = NULL;
 			foreach ($this->schema->oneOf as $index => $subSchema) {
-                unset($data);
-                if($this->coerce)
-                    $data = $this->data;
-                else
-                    $data = & $this->data;
+				unset($data);
+				if($this->coerce)
+					$data = $this->data;
+				else
+					$data = & $this->data;
 				$subResult = $this->subResult($data, $subSchema, FALSE);
 				if ($subResult->valid) {
-                    $this->data = & $data;
+					$this->data = & $data;
 					if ($successIndex === NULL) {
 						$successIndex = $index;
 					} else {
