@@ -49,8 +49,8 @@ class Validator
 
     /**
      * boolean option. if true, then all values not found in the input json
-     * but specified as properties in the schema will be set to their default
-     * values.
+     * but specified as properties in the schema that have an explicit default
+     * value set, will be set to that value.
      *
      * Omitting this keyword has the same behavior as a value of false.
      */
@@ -389,7 +389,7 @@ class Validator
 		if (isset($this->schema->properties)) {
 			foreach ($this->schema->properties as $key => $subSchema) {
 				$checkedProperties[$key] = TRUE;
-				if (!array_key_exists($key, (array)$this->data) && $this->options(self::OPTION_SET_MISSING_TO_DEFAULT)) {
+				if (!array_key_exists($key, (array)$this->data) && $this->options(self::OPTION_SET_MISSING_TO_DEFAULT) && isset($schema->default)) {
 					if(!$this->createValueForProperty($key)) {
 						$this->fail(self::OBJECT_NO_DEFAULT, "", "/properties/{$key}", "Missing default value for property: {$key}");
 					}
