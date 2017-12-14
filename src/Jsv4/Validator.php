@@ -30,19 +30,32 @@ class Validator
 	const OBJECT_REQUIRED				 = 302;
 	const OBJECT_ADDITIONAL_PROPERTIES = 303;
 	const OBJECT_DEPENDENCY_KEY		 = 304;
+	const OBJECT_NO_DEFAULT				 = 305;
 	// Array errors
 	const ARRAY_LENGTH_SHORT			 = 400;
 	const ARRAY_LENGTH_LONG			 = 401;
 	const ARRAY_UNIQUE				 = 402;
 	const ARRAY_ADDITIONAL_ITEMS		 = 403;
-	const ARRAY_INDEX_TYPE             = 404;
+	const ARRAY_INDEX_TYPE				 = 404;
 
 	/* options */
 	/**
 	 * boolean option. if true, then a missing default of an object property
-	 * will render the coercive validator unable to assign a default value.
+	 * will render the coercive validator unable to conjure a default value.
+     *
+     * Omitting this keyword has the same behavior as a value of false.
 	 */
 	const OPTION_NO_IMPLICIT_DEFAULT = "no_implicit_default";
+
+    /**
+     * boolean option. if true, then all values not found in the input json
+     * but specified as properties in the schema will be set to their default
+     * values.
+     *
+     * Omitting this keyword has the same behavior as a value of false.
+     */
+    const OPTION_SET_MISSING_TO_DEFAULT = "set_missing_to_default";
+
 	/**
 	 * boolean option. if true, then the non-standard "ignoreNullProperties"
 	 * validation keyword is also recognized.
@@ -227,11 +240,7 @@ class Validator
 	private function option($optionKey) {
 		switch($optionKey) {
 			case self::OPTION_NO_IMPLICIT_DEFAULT: // bool
-				if(!array_key_exists($optionKey, $this->options))
-					return false;
-				return (bool)$this->options[$optionKey];
-			break;
-
+            case self::OPTION_SET_MISSING_TO_DEFAULT: // bool
 			case self::OPTION_ENABLE_IGNORE_NULL_PROPERTIES: // bool
 				if(!array_key_exists($optionKey, $this->options))
 					return false;
@@ -380,6 +389,11 @@ class Validator
 		if (isset($this->schema->properties)) {
 			foreach ($this->schema->properties as $key => $subSchema) {
 				$checkedProperties[$key] = TRUE;
+				if (!array_key_exists($key, (array)$this->data) && $this->options(self::OPTION_SET_MISSING_TO_DEFAULT)) {
+					if(!$this->createValueForProperty($key)) {
+						$this->fail(self::OBJECT_NO_DEFAULT, "", "/properties/{$key}", "Missing default value for property: {$key}");
+					}
+				}
 				if (array_key_exists($key, (array) $this->data)) {
 					$subResult = $this->subResult($this->data->$key, $subSchema);
 					$this->includeSubResult($subResult, self::pointerJoin(array($key)), self::pointerJoin(array("properties", $key)));
@@ -645,6 +659,12 @@ class Validator
 	}
 
 
+    /**
+     * will set $this->data->$key to the default value, if possible according
+     * to schema and options.
+     *
+     * @return bool whether the property's value could be set
+     */
 	private function createValueForProperty($key)
 	{
 		$schema = NULL;
