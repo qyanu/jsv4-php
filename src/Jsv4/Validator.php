@@ -390,8 +390,9 @@ class Validator
 			foreach ($this->schema->properties as $key => $subSchema) {
 				$checkedProperties[$key] = TRUE;
 				if (   !property_exists($this->data, $key)
-                	&& $this->option(self::OPTION_SET_MISSING_TO_DEFAULT)
-                	&& property_exists($subSchema, "default")
+                    && $this->option(self::OPTION_SET_MISSING_TO_DEFAULT)
+                    && is_object($subSchema)
+                    && property_exists($subSchema, "default")
                 ) {
 					if(!$this->createValueForProperty($key)) {
 						$this->fail(self::OBJECT_NO_DEFAULT, "", "/properties/{$key}", "Missing default value for property: {$key}");
